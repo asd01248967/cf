@@ -2,6 +2,14 @@ import CloudFlare       #匯入cloudflare模組
  
 cf = CloudFlare.CloudFlare(token="hv6Amq71guOUczpQHsCETPmqpTsuVo6d0Vtv9AJn")   #給予cloudflare的class類別token值，賦予它取值&編輯&刪除的權限
 zones = cf.zones.get(params={'per_page':100})   #取得帳號下的的zone站台列表，per_page是指取得100個zone站台資訊，不給予per_page預設是20個
+
+def enableWildcard():
+    try:
+        print("Enable", hostname, "Wildcard設定為開啟(True)")                 #列出要準備刪除的域名與對應的域名ID
+        data = {"ssl": {"method": "http", "wildcard": True, "type": "dv"}}   #配置Patch的data，讓Wildcard開啟，data內的參數皆為force必填，可選項要參考官網
+        cf.zones.custom_hostnames.patch(zone_id, hostname_id, data=data)     #透過cf帶著token去將給予的zone_id下的hostname配置成給予的data資料(wildcard：True)
+    except CloudFlare.exceptions.CloudFlareAPIError as e:       #用except去承接如果有發生錯誤的話
+        exit('api error: %d %s' % (e, e))                       #離開且顯示錯誤的api資訊訊息與錯誤碼
  
 for zone in sorted(zones, key=lambda v: v['name']):     #將zones列表分別按照name的排序取出值，並將之賦予給zone的區域內(僅在這個for區域)的變數
     zone_name = zone['name']    #將zone內的name資料賦予給zone_name變數(也就是zone站台名稱)
@@ -20,12 +28,7 @@ for zone in sorted(zones, key=lambda v: v['name']):     #將zones列表分別按
             hostname = hostname_info['hostname']       #將hostname_info內的hostname資料賦予給hostname
             hostname_id = hostname_info['id']          #將hostname_info內的id資料賦予給hostname_id
 
-            try:
-                print("Enable", hostname, "Wildcard設定為開啟(True)")                 #列出要準備刪除的域名與對應的域名ID
-                data = {"ssl": {"method": "http", "wildcard": True, "type": "dv"}}   #配置Patch的data，讓Wildcard開啟，data內的參數皆為force必填，可選項要參考官網
-                cf.zones.custom_hostnames.patch(zone_id, hostname_id, data=data)     #透過cf帶著token去將給予的zone_id下的hostname配置成給予的data資料(wildcard：True)
-            except CloudFlare.exceptions.CloudFlareAPIError as e:       #用except去承接如果有發生錯誤的話
-                    exit('api error: %d %s' % (e, e))                       #離開且顯示錯誤的api資訊訊息與錯誤碼
+            enableWildcard()
 
 
         page_number += 1            #取得本頁資訊後，將頁面數+1跳至下一頁讓迴圈去跑

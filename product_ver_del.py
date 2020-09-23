@@ -3,7 +3,24 @@ import re               #匯入re模組(正規表達式)
  
 cf = CloudFlare.CloudFlare(token="hv6Amq71guOUczpQHsCETPmqpTsuVo6d0Vtv9AJn")   #給予cloudflare的class類別token值，賦予它取值&編輯&刪除的權限
 zones = cf.zones.get(params={'per_page':100})   #取得帳號下的的zone站台列表，per_page是指取得100個zone站台資訊，不給予per_page預設是20個
- 
+
+def delete_hostname():                                              #將delete hostname的功能設定為function，更彈性化
+    if re.search(r'(^www\.|^m\.)\w*\.(com$|net$)', hostname):       #用正規表達式挑選出www.和m.開頭 + .com與.net結尾的網域
+        try:                                                        #先試著用try/except去嘗試看看與皆錯誤
+            print("準備刪除", hostname, hostname_id)                 #列出要準備刪除的域名與對應的域名ID
+            #cf.zones.custom_hostnames.delete(zone_id, hostname_id)  #刪除域名
+            print("刪除成功")                                        #告知域名刪除成功
+        except CloudFlare.exceptions.CloudFlareAPIError as e:       #用except去承接如果有發生錯誤的話
+            exit('api error: %d %s' % (e, e))                       #離開且顯示錯誤的api資訊訊息與錯誤碼
+
+def enableWildcard():
+    try:
+        print("Enable", hostname, "Wildcard設定為開啟(True)")                 #列出要準備刪除的域名與對應的域名ID
+        data = {"ssl": {"method": "http", "wildcard": True, "type": "dv"}}   #配置Patch的data，讓Wildcard開啟，data內的參數皆為force必填，可選項要參考官網
+        cf.zones.custom_hostnames.patch(zone_id, hostname_id, data=data)     #透過cf帶著token去將給予的zone_id下的hostname配置成給予的data資料(wildcard：True)
+    except CloudFlare.exceptions.CloudFlareAPIError as e:       #用except去承接如果有發生錯誤的話
+        exit('api error: %d %s' % (e, e))                       #離開且顯示錯誤的api資訊訊息與錯誤碼
+
 for zone in sorted(zones, key=lambda v: v['name']):     #將zones列表分別按照name的排序取出值，並將之賦予給zone的區域內(僅在這個for區域)的變數
     zone_name = zone['name']    #將zone內的name資料賦予給zone_name變數(也就是zone站台名稱)
     zone_id = zone['id']        #將zone內的id資料賦予給zone_id變數(也就是zone站台id)
@@ -21,13 +38,8 @@ for zone in sorted(zones, key=lambda v: v['name']):     #將zones列表分別按
             hostname = hostname_info['hostname']       #將hostname_info內的hostname資料賦予給hostname
             hostname_id = hostname_info['id']          #將hostname_info內的id資料賦予給hostname_id
 
-            if re.search(r'(^www\.|^m\.)\w*\.(com$|net$)', hostname):       #用正規表達式挑選出www.和m.開頭 + .com與.net結尾的網域
-                try:                                                        #先試著用try/except去嘗試看看與皆錯誤
-                    print("準備刪除", hostname, hostname_id)                 #列出要準備刪除的域名與對應的域名ID
-                    cf.zones.custom_hostnames.delete(zone_id, hostname_id)  #刪除域名
-                    print("刪除成功")                                        #告知域名刪除成功
-                except CloudFlare.exceptions.CloudFlareAPIError as e:       #用except去承接如果有發生錯誤的話
-                    exit('api error: %d %s' % (e, e))                       #離開且顯示錯誤的api資訊訊息與錯誤碼
+            #delete_hostname()
+            #enableWildcard()
 
         page_number += 1            #取得本頁資訊後，將頁面數+1跳至下一頁讓迴圈去跑
         if custom_info_list == []:  #如果迴圈取得的當頁面的網域資訊是空的(代表已跑完該zone)，就會進入if區塊內
